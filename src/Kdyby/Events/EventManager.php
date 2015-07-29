@@ -92,6 +92,11 @@ class EventManager extends Doctrine\Common\EventManager
 	 */
 	public function dispatchEvent($eventName, Doctrine\Common\EventArgs $eventArgs = NULL)
 	{
+		if ($eventName instanceof Kdyby\Events\EventObjectInterface) {
+			$eventArgs = new EventArgsList(array($eventName));
+			$eventName = $eventName->getEventName();
+		}
+
 		if ($this->panel) {
 			$this->panel->eventDispatch($eventName, $eventArgs);
 		}
