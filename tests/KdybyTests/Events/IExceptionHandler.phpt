@@ -11,7 +11,6 @@
 namespace KdybyTests\Events;
 
 use Kdyby;
-use Nette;
 use Tester;
 use Tester\Assert;
 
@@ -34,7 +33,7 @@ class IExceptionHandlerTestCase extends Tester\TestCase
 	protected function setUp()
 	{
 		$this->evm = new Kdyby\Events\EventManager();
-		$this->evm->addEventListener('testEvent', array($this, 'eventHandler'));
+		$this->evm->addEventListener('testEvent', [$this, 'eventHandler']);
 	}
 
 

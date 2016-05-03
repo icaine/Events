@@ -12,7 +12,6 @@ namespace KdybyTests\Events;
 
 use Kdyby;
 use Kdyby\Events\Event;
-use Nette;
 use Tester;
 use Tester\Assert;
 
@@ -29,12 +28,12 @@ class EventTest extends Tester\TestCase
 
 	public function dataParseName()
 	{
-		return array(
-			array(array(NULL, 'onFoo', NULL), 'onFoo'),
-			array(array('App', 'onFoo', '::'), 'App::onFoo'),
-			array(array('App', 'onFoo', '::'), '\\App::onFoo'),
-			array(array('app.blog', 'foo', '.'), 'app.blog.foo'),
-		);
+		return [
+			[[NULL, 'onFoo', NULL], 'onFoo'],
+			[['App', 'onFoo', '::'], 'App::onFoo'],
+			[['App', 'onFoo', '::'], '\\App::onFoo'],
+			[['app.blog', 'foo', '.'], 'app.blog.foo'],
+		];
 	}
 
 
@@ -59,10 +58,10 @@ class EventTest extends Tester\TestCase
 		$foo->onBar = new Event('bar');
 
 		$foo->onBar[] = function ($lorem) use (&$calls) {
-			$calls[] = array(__METHOD__, func_get_args());
+			$calls[] = [__METHOD__, func_get_args()];
 		};
 		$foo->onBar[] = function ($lorem) use (&$calls) {
-			$calls[] = array(__METHOD__, func_get_args());
+			$calls[] = [__METHOD__, func_get_args()];
 		};
 
 		return $foo;
@@ -73,12 +72,13 @@ class EventTest extends Tester\TestCase
 	public function testDispatch_Method()
 	{
 		$foo = $this->dataDispatch($calls);
-		$foo->onBar->dispatch(array(10));
+		$foo->onBar->dispatch([10]);
 
-		Assert::same(array(
-			array('KdybyTests\Events\EventTest::KdybyTests\Events\{closure}', array(10)),
-			array('KdybyTests\Events\EventTest::KdybyTests\Events\{closure}', array(10)),
-		), $calls);
+		Assert::count(2, $calls);
+		Assert::match('KdybyTests\Events\%A?%{closure}', $calls[0][0]);
+		Assert::same([10], $calls[0][1]);
+		Assert::match('KdybyTests\Events\%A?%{closure}', $calls[1][0]);
+		Assert::same([10], $calls[1][1]);
 	}
 
 
@@ -88,10 +88,11 @@ class EventTest extends Tester\TestCase
 		$foo = $this->dataDispatch($calls);
 		$foo->onBar(15);
 
-		Assert::same(array(
-			array('KdybyTests\Events\EventTest::KdybyTests\Events\{closure}', array(15)),
-			array('KdybyTests\Events\EventTest::KdybyTests\Events\{closure}', array(15)),
-		), $calls);
+		Assert::count(2, $calls);
+		Assert::match('KdybyTests\Events\%A?%{closure}', $calls[0][0]);
+		Assert::same([15], $calls[0][1]);
+		Assert::match('KdybyTests\Events\%A?%{closure}', $calls[1][0]);
+		Assert::same([15], $calls[1][1]);
 	}
 
 
@@ -114,16 +115,16 @@ class EventTest extends Tester\TestCase
 
 		// listener
 		$foo->onMagic[] = function (FooMock $foo, $int) use (&$calls) {
-			$calls[] = array(__METHOD__, func_get_args());
+			$calls[] = [__METHOD__, func_get_args()];
 		};
 
 		// event
-		$foo->onStartup = new Event('onStartup', array(), __NAMESPACE__ . '\\StartupEventArgs');
+		$foo->onStartup = new Event('onStartup', [], __NAMESPACE__ . '\\StartupEventArgs');
 		$foo->onStartup->injectEventManager($evm);
 
 		// listener
 		$foo->onStartup[] = function (FooMock $foo, $int) use (&$calls) {
-			$calls[] = array(__METHOD__, func_get_args());
+			$calls[] = [__METHOD__, func_get_args()];
 		};
 
 		return $evm;
@@ -136,8 +137,14 @@ class EventTest extends Tester\TestCase
 		$this->dataToManagerDispatch($foo = new FooMock, $listener = new LoremListener, $calls);
 
 		$foo->onMagic($foo, 2);
-		Assert::same(array(array('KdybyTests\Events\EventTest::KdybyTests\Events\{closure}', array($foo, 2))), $calls);
-		Assert::same(array(array('KdybyTests\Events\LoremListener::onMagic', array($foo, 2))), $listener->calls);
+
+		Assert::count(1, $calls);
+		Assert::match('KdybyTests\Events\%A?%{closure}', $calls[0][0]);
+		Assert::same([$foo, 2], $calls[0][1]);
+
+		Assert::count(1, $listener->calls);
+		Assert::same('KdybyTests\Events\LoremListener::onMagic', $listener->calls[0][0]);
+		Assert::same([$foo, 2], $listener->calls[0][1]);
 	}
 
 
@@ -146,9 +153,15 @@ class EventTest extends Tester\TestCase
 	{
 		$this->dataToManagerDispatch($foo = new FooMock, $listener = new LoremListener, $calls);
 
-		$foo->onMagic->dispatch(array($foo, 3));
-		Assert::same(array(array('KdybyTests\Events\EventTest::KdybyTests\Events\{closure}', array($foo, 3))), $calls);
-		Assert::same(array(array('KdybyTests\Events\LoremListener::onMagic', array($foo, 3))), $listener->calls);
+		$foo->onMagic->dispatch([$foo, 3]);
+
+		Assert::count(1, $calls);
+		Assert::match('KdybyTests\Events\%A?%{closure}', $calls[0][0]);
+		Assert::same([$foo, 3], $calls[0][1]);
+
+		Assert::count(1, $listener->calls);
+		Assert::same('KdybyTests\Events\LoremListener::onMagic', $listener->calls[0][0]);
+		Assert::same([$foo, 3], $listener->calls[0][1]);
 	}
 
 
@@ -158,14 +171,68 @@ class EventTest extends Tester\TestCase
 		$this->dataToManagerDispatch($foo = new FooMock, $listener = new LoremListener, $calls);
 
 		$foo->onStartup($foo, 4);
-		Assert::same(array(array('KdybyTests\Events\EventTest::KdybyTests\Events\{closure}', array($foo, 4))), $calls);
+
+		Assert::count(1, $calls);
+		Assert::match('KdybyTests\Events\%A?%{closure}', $calls[0][0]);
+		Assert::same([$foo, 4], $calls[0][1]);
 		Assert::same(1, count($listener->calls));
+
 		list($call) = $listener->calls;
 		Assert::same('KdybyTests\Events\LoremListener::onStartup', $call[0]);
 		list($args) = $call[1];
 		Assert::true($args instanceof StartupEventArgs);
 		Assert::same($foo, $args->foo);
 		Assert::same(4, $args->int);
+	}
+
+
+
+	public function testDispatchOrderGlobalFirst()
+	{
+		$listener = new EventListenerMock();
+		$evm = new Kdyby\Events\EventManager();
+		$evm->addEventSubscriber($listener);
+
+		$event = new Event('onFoo');
+		$event->injectEventManager($evm);
+		$event->globalDispatchFirst = TRUE;
+
+		$event[] = function () use ($listener) {
+			$listener->calls[] = __METHOD__;
+		};
+
+		$args = new EventArgsMock();
+		$event->dispatch($args);
+
+		Assert::count(2, $listener->calls);
+		Assert::same('KdybyTests\Events\EventListenerMock::onFoo', $listener->calls[0][0]);
+		Assert::same([$args], $listener->calls[0][1]);
+		Assert::match('KdybyTests\Events\%A?%{closure}', $listener->calls[1]);
+	}
+
+
+
+	public function testDispatchOrderGlobalLast()
+	{
+		$listener = new EventListenerMock();
+		$evm = new Kdyby\Events\EventManager();
+		$evm->addEventSubscriber($listener);
+
+		$event = new Event('onFoo');
+		$event->injectEventManager($evm);
+		$event->globalDispatchFirst = FALSE;
+
+		$event[] = function () use ($listener) {
+			$listener->calls[] = __METHOD__;
+		};
+
+		$args = new EventArgsMock();
+		$event->dispatch($args);
+
+		Assert::count(2, $listener->calls);
+		Assert::match('KdybyTests\Events\%A?%{closure}', $listener->calls[0]);
+		Assert::same('KdybyTests\Events\EventListenerMock::onFoo', $listener->calls[1][0]);
+		Assert::same([$args], $listener->calls[1][1]);
 	}
 
 }

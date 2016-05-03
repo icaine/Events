@@ -8,6 +8,16 @@
  * For the full copyright and license information, please view the file license.txt that was distributed with this source code.
  */
 
-if (!class_exists('Doctrine\Common\EventManager')) {
-	require(__DIR__ . '/aliases.php');
+namespace Kdyby\Events;
+
+
+
+/**
+ * Bypasses the method_exists() check and expects you to either implement the method, or handle the event in magic __call().
+ *
+ * @author Filip Procházka <filip@prochazka.su>
+ */
+interface CallableSubscriber extends Subscriber
+{
+
 }
